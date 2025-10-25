@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传歌曲</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="file"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+        }
+
+        input[type="file"] {
+            padding: 15px;
+            cursor: pointer;
+        }
+
+        .upload-btn {
+            width: 100%;
+            padding: 15px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .upload-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .nav-links {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 0 15px;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            color: #0056b3;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.9em;
+        }
+
+        .file-info {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📤 上传歌曲</h1>
+
+        <div class="info">
+            <strong>提示：</strong>支持MP3等音频格式，文件大小不超过5MB
+        </div>
+
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="musicTitle">歌曲名称 *</label>
+                <input type="text" id="musicTitle" name="title" required 
+                       placeholder="请输入歌曲名称" maxlength="255">
+            </div>
+
+            <div class="form-group">
+                <label for="musicFile">选择音频文件 *</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="musicFile" name="file" required 
+                           accept="audio/*" onchange="handleFileSelect(this)">
+                    <div class="file-info" id="fileInfo"></div>
+                </div>
+            </div>
+
+            <button type="submit" class="upload-btn" id="submitBtn">
+                🎵 上传歌曲
+            </button>
+        </form>
+
+        <div class="message" id="message"></div>
+
+        <div class="nav-links">
+            <a href="index.html">🎮 猜歌游戏</a>
+            <a href="manage.html">⚙️ 管理歌曲</a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const messageDiv = document.getElementById('message');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // 处理文件选择
+        function handleFileSelect(input) {
+            const file = input.files[0];
+            const fileInfo = document.getElementById('fileInfo');
+            
+            if (file) {
+                const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                fileInfo.textContent = `已选择: ${file.name} (${fileSize} MB)`;
+                
+                // 检查文件大小
+                if (file.size > 5 * 1024 * 1024) {
+                    fileInfo.textContent = '文件大小超过5MB限制';
+                    fileInfo.style.color = '#dc3545';
+                } else {
+                    fileInfo.style.color = '#28a745';
+                }
+            }
+        }
+
+        // 表单提交
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData();
+            const fileInput = document.getElementById('musicFile');
+            const titleInput = document.getElementById('musicTitle');
+
+            if (!fileInput.files[0]) {
+                showMessage('请选择要上传的文件', 'error');
+                return;
+            }
+
+            formData.append('file', fileInput.files[0]);
+            formData.append('title', titleInput.value);
+
+            // 禁用提交按钮
+            submitBtn.disabled = true;
+            submitBtn.textContent = '上传中...';
+
+            try {
+                const response = await fetch('/api/music/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.text();
+
+                if (response.ok) {
+                    showMessage(result, 'success');
+                    form.reset();
+                    document.getElementById('fileInfo').textContent = '';
+                } else {
+                    showMessage(result, 'error');
+                }
+            } catch (error) {
+                showMessage('上传失败: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🎵 上传歌曲';
+            }
+        });
+
+        // 显示消息
+        function showMessage(text, type) {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+
+            // 3秒后自动隐藏成功消息
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>
