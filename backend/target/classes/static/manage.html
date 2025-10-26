@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理歌曲</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .content {
+            background: white;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            min-height: 400px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .refresh-btn {
+            padding: 10px 20px;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            color: #666;
+            font-size: 1em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            background: #f8f9fa;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            color: #333;
+            font-weight: bold;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            color: #666;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .title-cell {
+            font-weight: bold;
+            color: #333;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .time-cell {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-play, .btn-delete {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+
+        .btn-play {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-play:hover {
+            background: #218838;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .nav-links {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 0 15px;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+            transform: translateY(-2px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .modal-btn.cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .modal-btn.confirm {
+            background: #dc3545;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ 管理歌曲</h1>
+            <p class="subtitle">查看和管理所有歌曲</p>
+        </div>
+
+        <div class="content">
+            <div class="controls">
+                <button class="refresh-btn" onclick="loadMusicList()">🔄 刷新列表</button>
+                <div class="stats" id="stats">共 0 首歌曲</div>
+            </div>
+
+            <div id="loading" class="loading">加载中...</div>
+            <div id="musicTable" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>歌曲名称</th>
+                            <th>上传时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="musicListBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <h3>📭 暂无歌曲</h3>
+                <p>快去上传一些歌曲吧！</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认对话框 -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <h3>⚠️ 确认删除</h3>
+            <p>确定要删除这首歌曲吗？此操作不可恢复。</p>
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeDeleteModal()">取消</button>
+                <button class="modal-btn confirm" onclick="confirmDelete()">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-links">
+        <a href="index.html">🎮 猜歌游戏</a>
+        <a href="upload.html">📤 上传歌曲</a>
+    </div>
+
+    <script>
+        let musicList = [];
+        let currentDeleteId = null;
+
+        // 加载歌曲列表
+        async function loadMusicList() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('musicTable').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/music/list');
+                if (response.ok) {
+                    musicList = await response.json();
+                    displayMusicList();
+                } else {
+                    alert('加载失败，请稍后重试');
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+                alert('加载失败，请稍后重试');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // 显示歌曲列表
+        function displayMusicList() {
+            const tbody = document.getElementById('musicListBody');
+            const statsDiv = document.getElementById('stats');
+            
+            statsDiv.textContent = `共 ${musicList.length} 首歌曲`;
+
+            if (musicList.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('musicTable').style.display = 'block';
+            
+            tbody.innerHTML = musicList.map(music => {
+                const uploadTime = new Date(music.uploadTime).toLocaleString('zh-CN');
+                return `
+                    <tr>
+                        <td>${music.id}</td>
+                        <td class="title-cell">${escapeHtml(music.title)}</td>
+                        <td class="time-cell">${uploadTime}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn-play" onclick="playMusic(${music.id})">▶️ 播放</button>
+                                <button class="btn-delete" onclick="showDeleteModal(${music.id})">🗑️ 删除</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 播放歌曲
+        function playMusic(id) {
+            window.open(`/api/music/play/${id}`, '_blank');
+        }
+
+        // 显示删除确认对话框
+        function showDeleteModal(id) {
+            currentDeleteId = id;
+            document.getElementById('deleteModal').classList.add('show');
+        }
+
+        // 关闭删除确认对话框
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('show');
+            currentDeleteId = null;
+        }
+
+        // 确认删除
+        async function confirmDelete() {
+            if (!currentDeleteId) return;
+
+            try {
+                const response = await fetch(`/api/music/${currentDeleteId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('删除成功！');
+                    closeDeleteModal();
+                    loadMusicList(); // 重新加载列表
+                } else {
+                    const result = await response.text();
+                    alert('删除失败: ' + result);
+                }
+            } catch (error) {
+                console.error('删除失败:', error);
+                alert('删除失败: ' + error.message);
+            }
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 页面加载时自动加载列表
+        loadMusicList();
+    </script>
+</body>
+</html>

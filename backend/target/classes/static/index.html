@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猜歌游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .music-player {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .audio-container {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        audio {
+            width: 100%;
+            outline: none;
+        }
+
+        .info {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .btn-play {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-play:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-next {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-next:hover {
+            background: #138496;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(23, 162, 184, 0.4);
+        }
+
+        .btn-reveal {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-reveal:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .answer {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 10px;
+            color: #0056b3;
+            font-size: 1.2em;
+            font-weight: bold;
+            display: none;
+        }
+
+        .answer.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nav-links {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 猜歌游戏</h1>
+        <p class="subtitle">你能猜出这首歌的名字吗？</p>
+
+        <div class="music-player">
+            <div class="audio-container">
+                <audio id="audioPlayer" controls>
+                    您的浏览器不支持音频播放
+                </audio>
+            </div>
+            <div class="info" id="musicInfo">点击"下一首"开始游戏</div>
+            <div class="answer" id="answer"></div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn-play" onclick="playMusic()">▶️ 播放</button>
+            <button class="btn-next" onclick="loadNextSong()">⏭️ 下一首</button>
+            <button class="btn-reveal" onclick="revealAnswer()">🔍 揭晓答案</button>
+        </div>
+
+        <div class="nav-links">
+            <a href="upload.html">📤 上传歌曲</a>
+            <a href="manage.html">⚙️ 管理歌曲</a>
+        </div>
+    </div>
+
+    <script>
+        let currentMusic = null;
+        let audioPlayer = document.getElementById('audioPlayer');
+        
+        // 加载下一首歌
+        async function loadNextSong() {
+            try {
+                document.getElementById('musicInfo').textContent = '正在加载...';
+                document.getElementById('answer').classList.remove('show');
+                
+                const response = await fetch('/api/music/random');
+                if (response.ok) {
+                    currentMusic = await response.json();
+                    audioPlayer.src = `/api/music/play/${currentMusic.id}`;
+                    document.getElementById('musicInfo').textContent = '音乐已就绪，点击播放按钮开始播放';
+                } else {
+                    alert('没有可用的歌曲，请先上传歌曲！');
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+                alert('加载失败，请稍后重试');
+            }
+        }
+
+        // 播放音乐
+        function playMusic() {
+            if (audioPlayer.src && !audioPlayer.src.includes('about:blank')) {
+                audioPlayer.play();
+            } else {
+                alert('请先点击"下一首"加载歌曲');
+            }
+        }
+
+        // 揭晓答案
+        function revealAnswer() {
+            if (currentMusic) {
+                const answerDiv = document.getElementById('answer');
+                answerDiv.textContent = `🎵 答案：${currentMusic.title}`;
+                answerDiv.classList.add('show');
+            } else {
+                alert('请先加载一首歌');
+            }
+        }
+
+
+    </script>
+</body>
+</html>

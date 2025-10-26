@@ -169,14 +169,7 @@
             text-decoration: underline;
         }
 
-        .stats {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            color: #666;
-            font-size: 0.9em;
-        }
+
     </style>
 </head>
 <body>
@@ -199,8 +192,6 @@
             <button class="btn-next" onclick="loadNextSong()">⏭️ 下一首</button>
             <button class="btn-reveal" onclick="revealAnswer()">🔍 揭晓答案</button>
         </div>
-
-        <div class="stats" id="stats"></div>
 
         <div class="nav-links">
             <a href="upload.html">📤 上传歌曲</a>
@@ -226,7 +217,6 @@
                 } else {
                     alert('没有可用的歌曲，请先上传歌曲！');
                 }
-                updateStats();
             } catch (error) {
                 console.error('加载失败:', error);
                 alert('加载失败，请稍后重试');
@@ -253,22 +243,7 @@
             }
         }
 
-        // 更新统计信息
-        async function updateStats() {
-            try {
-                const response = await fetch('/api/music/stats');
-                if (response.ok) {
-                    const stats = await response.json();
-                    document.getElementById('stats').innerHTML = 
-                        `已播放: ${stats.playedCount || 0} 首 | 剩余: ${stats.remainingCount || 0} 首`;
-                }
-            } catch (error) {
-                console.error('获取统计失败:', error);
-            }
-        }
 
-        // 页面加载时更新统计信息
-        updateStats();
     </script>
 </body>
 </html>
