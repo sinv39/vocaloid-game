@@ -46,6 +46,9 @@ public class MusicController {
             MusicEntity music = new MusicEntity(title, fileBytes);
             musicRepository.save(music);
             
+            // 清除缓存
+            smartRandomService.clearCache();
+            
             return ResponseEntity.ok().body("歌曲上传成功！");
             
         } catch (IOException e) {
@@ -86,9 +89,16 @@ public class MusicController {
     // 获取所有歌曲列表（管理页面用）
     @GetMapping("/list")
     public ResponseEntity<List<MusicInfoDto>> getAllMusic() {
-        List<MusicEntity> musicList = musicRepository.findAllByOrderByUploadTimeDesc();
-        List<MusicInfoDto> musicInfoList = musicList.stream()
-                .map(music -> new MusicInfoDto(music.getId(), music.getTitle(), music.getUploadTime()))
+        // 使用缓存获取歌曲信息，只查询必要字段
+        List<Object[]> results = smartRandomService.getMusicInfoForManage();
+        List<MusicInfoDto> musicInfoList = results.stream()
+                .map(row -> {
+                    Integer id = (Integer) row[0];
+                    String title = (String) row[1];
+                    java.sql.Timestamp timestamp = (java.sql.Timestamp) row[2];
+                    java.time.LocalDateTime uploadTime = timestamp.toLocalDateTime();
+                    return new MusicInfoDto(id, title, uploadTime);
+                })
                 .collect(Collectors.toList());
         return ResponseEntity.ok(musicInfoList);
     }
@@ -99,6 +109,8 @@ public class MusicController {
         try {
             if (musicRepository.existsById(id)) {
                 musicRepository.deleteById(id);
+                // 清除缓存
+                smartRandomService.clearCache();
                 return ResponseEntity.ok().body("歌曲删除成功");
             } else {
                 return ResponseEntity.notFound().build();

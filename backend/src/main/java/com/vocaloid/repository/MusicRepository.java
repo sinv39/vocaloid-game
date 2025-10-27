@@ -21,6 +21,12 @@ public interface MusicRepository extends JpaRepository<MusicEntity, Integer> {
     @Query(value = "SELECT COUNT(*) FROM music", nativeQuery = true)
     long countAllMusic();
     
+    @Query(value = "SELECT id FROM music ORDER BY id", nativeQuery = true)
+    List<Integer> findAllSongIds();
+    
+    @Query(value = "SELECT id, title, upload_time FROM music ORDER BY upload_time DESC", nativeQuery = true)
+    List<Object[]> findAllMusicInfo();
+    
     List<MusicEntity> findByTitleContainingIgnoreCase(String title);
     
     List<MusicEntity> findAllByOrderByUploadTimeDesc();
