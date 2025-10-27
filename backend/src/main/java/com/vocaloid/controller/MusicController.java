@@ -1,5 +1,6 @@
 package com.vocaloid.controller;
 
+import com.vocaloid.dto.MusicInfoDto;
 import com.vocaloid.entity.MusicEntity;
 import com.vocaloid.repository.MusicRepository;
 import com.vocaloid.service.SmartRandomService;
@@ -13,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/music")
@@ -83,9 +85,12 @@ public class MusicController {
     
     // 获取所有歌曲列表（管理页面用）
     @GetMapping("/list")
-    public ResponseEntity<List<MusicEntity>> getAllMusic() {
+    public ResponseEntity<List<MusicInfoDto>> getAllMusic() {
         List<MusicEntity> musicList = musicRepository.findAllByOrderByUploadTimeDesc();
-        return ResponseEntity.ok(musicList);
+        List<MusicInfoDto> musicInfoList = musicList.stream()
+                .map(music -> new MusicInfoDto(music.getId(), music.getTitle(), music.getUploadTime()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(musicInfoList);
     }
     
     // 删除歌曲

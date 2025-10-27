@@ -1,8 +1,9 @@
-com\vocaloid\controller\PageController.class
 com\vocaloid\config\CorsConfig.class
+com\vocaloid\service\SmartRandomService.class
+com\vocaloid\dto\MusicInfoDto.class
+com\vocaloid\entity\MusicEntity.class
+com\vocaloid\controller\PageController.class
 com\vocaloid\config\WebConfig.class
 com\vocaloid\controller\MusicController.class
-com\vocaloid\service\SmartRandomService.class
 com\vocaloid\VocaloidGameApplication.class
-com\vocaloid\entity\MusicEntity.class
 com\vocaloid\repository\MusicRepository.class
