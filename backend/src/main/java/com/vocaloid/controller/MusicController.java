@@ -12,9 +12,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @RestController
 @RequestMapping("/api/music")
@@ -146,6 +150,114 @@ public class MusicController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+    
+    // 批量上传歌曲（ZIP压缩包）
+    @PostMapping("/batch-upload")
+    public ResponseEntity<?> batchUploadMusic(
+            @RequestParam("file") MultipartFile zipFile) {
+        
+        try {
+            // 检查文件是否为ZIP格式
+            String originalFilename = zipFile.getOriginalFilename();
+            if (originalFilename == null || !originalFilename.toLowerCase().endsWith(".zip")) {
+                return ResponseEntity.badRequest().body("压缩包格式错误，仅支持ZIP格式");
+            }
+            
+            // 支持的音频文件扩展名
+            Set<String> audioExtensions = Set.of(
+                "mp3", "wav", "m4a", "flac", "ogg", "aac", "wma"
+            );
+            
+            List<MusicEntity> musicList = new ArrayList<>();
+            
+            // 解压ZIP文件
+            try (InputStream inputStream = zipFile.getInputStream();
+                 ZipInputStream zipInputStream = new ZipInputStream(inputStream)) {
+                
+                ZipEntry entry;
+                while ((entry = zipInputStream.getNextEntry()) != null) {
+                    String entryName = entry.getName();
+                    
+                    // 检查是否为文件夹
+                    if (entry.isDirectory()) {
+                        return ResponseEntity.badRequest()
+                            .body("压缩包内不能包含文件夹，请确保所有文件都在根目录");
+                    }
+                    
+                    // 检查是否在子目录中（包含路径分隔符）
+                    if (entryName.contains("/") || entryName.contains("\\")) {
+                        return ResponseEntity.badRequest()
+                            .body("压缩包内不能包含文件夹，请确保所有文件都在根目录");
+                    }
+                    
+                    // 获取文件扩展名
+                    String extension = getFileExtension(entryName);
+                    if (extension == null || !audioExtensions.contains(extension.toLowerCase())) {
+                        return ResponseEntity.badRequest()
+                            .body("压缩包内包含非音频文件：" + entryName + "，请确保所有文件都是音频格式");
+                    }
+                    
+                    // 读取文件内容
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    long totalBytes = 0;
+                    final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+                    
+                    while ((bytesRead = zipInputStream.read(buffer)) != -1) {
+                        totalBytes += bytesRead;
+                        if (totalBytes > MAX_FILE_SIZE) {
+                            return ResponseEntity.badRequest()
+                                .body("文件 " + entryName + " 大小超过5MB限制");
+                        }
+                        baos.write(buffer, 0, bytesRead);
+                    }
+                    
+                    byte[] fileBytes = baos.toByteArray();
+                    
+                    // 提取文件名（去除扩展名）作为歌曲标题
+                    String title = entryName.substring(0, entryName.lastIndexOf('.'));
+                    if (title.isEmpty()) {
+                        title = entryName; // 如果没有扩展名，使用完整文件名
+                    }
+                    
+                    // 创建音乐实体
+                    MusicEntity music = new MusicEntity(title, fileBytes);
+                    musicList.add(music);
+                    
+                    zipInputStream.closeEntry();
+                }
+            }
+            
+            // 批量保存到数据库
+            if (!musicList.isEmpty()) {
+                musicRepository.saveAll(musicList);
+                // 清除缓存
+                smartRandomService.clearCache();
+                return ResponseEntity.ok()
+                    .body("批量上传成功！共上传 " + musicList.size() + " 首歌曲");
+            } else {
+                return ResponseEntity.badRequest().body("压缩包为空或未包含有效的音频文件");
+            }
+            
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().body("文件处理失败：" + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("批量上传失败：" + e.getMessage());
+        }
+    }
+    
+    // 获取文件扩展名
+    private String getFileExtension(String filename) {
+        if (filename == null || filename.isEmpty()) {
+            return null;
+        }
+        int lastDotIndex = filename.lastIndexOf('.');
+        if (lastDotIndex == -1 || lastDotIndex == filename.length() - 1) {
+            return null;
+        }
+        return filename.substring(lastDotIndex + 1);
     }
     
     // 生成会话ID

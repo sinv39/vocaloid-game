@@ -5,7 +5,7 @@
 ## ✨ 功能特性
 
 - 🎧 **猜歌挑战** - 随机播放歌曲，测试音乐知识
-- 📤 **歌曲上传** - 支持多种音频格式，最大5MB
+- 📤 **歌曲上传** - 支持单文件上传和批量上传（ZIP压缩包）
 - 🎵 **歌曲管理** - 查看、播放、删除已上传的歌曲
 - 🎯 **智能随机** - 会话级去重，避免重复播放
 - 📱 **响应式设计** - 支持桌面和移动设备
@@ -23,7 +23,22 @@
 CREATE DATABASE vocaloid_game CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-2. 修改数据库连接配置（`backend/src/main/resources/application.yml`）：
+2. 创建表
+```sql
+CREATE TABLE `music` (
+                         `id` int NOT NULL AUTO_INCREMENT COMMENT '音乐ID',
+                         `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '歌曲标题',
+                         `metadata` longblob NOT NULL COMMENT '音频文件数据(BASE64编码)',
+                         `upload_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
+                         `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                         `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                         PRIMARY KEY (`id`),
+                         KEY `idx_title` (`title`),
+                         KEY `idx_upload_time` (`upload_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=127 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='音乐文件表';
+```
+
+3. 修改数据库连接配置（`backend/src/main/resources/application.yml`）：
 ```yaml
 spring:
   datasource:
@@ -42,6 +57,9 @@ mvn clean package -DskipTests
 
 # 启动应用
 java -jar target/vocaloid-game-1.0.0.jar
+
+# 或者使用Docker部署
+
 ```
 
 ### 访问应用
@@ -92,8 +110,11 @@ vocaloid-game/
 - 多用户支持
 
 ### 文件上传
-- 支持MP3、WAV、M4A等格式
-- 5MB文件大小限制
+- **单文件上传**：支持MP3、WAV、M4A、FLAC、OGG、AAC、WMA等格式
+- **批量上传**：支持ZIP压缩包，自动提取音频文件并使用文件名作为歌曲名
+- 单个音频文件大小限制：5MB
+- 压缩包总大小限制：50MB
+- 压缩包要求：仅支持ZIP格式，不能包含文件夹，必须全部为音频文件
 - BASE64编码存储
 
 ### 音频播放
@@ -123,7 +144,8 @@ vocaloid-game/
 
 ### API接口
 - `/api/music/random` - 获取随机歌曲
-- `/api/music/upload` - 上传歌曲
+- `/api/music/upload` - 单文件上传歌曲
+- `/api/music/batch-upload` - 批量上传歌曲（ZIP压缩包）
 - `/api/music/list` - 获取歌曲列表
 - `/api/music/play/{id}` - 播放歌曲
 - `/api/music/{id}` - 删除歌曲

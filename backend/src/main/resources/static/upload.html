@@ -153,25 +153,63 @@
             color: #666;
             font-size: 0.9em;
         }
+
+        .upload-mode-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .upload-mode-selector label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: normal;
+            margin-bottom: 0;
+        }
+
+        .upload-mode-selector input[type="radio"] {
+            width: auto;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .form-group.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📤 上传歌曲</h1>
 
-        <div class="info">
+        <div class="info" id="infoBox">
             <strong>提示：</strong>支持MP3等音频格式，文件大小不超过5MB
         </div>
 
         <form id="uploadForm">
-            <div class="form-group">
+            <div class="upload-mode-selector">
+                <label>
+                    <input type="radio" name="uploadMode" value="single" checked onchange="switchUploadMode()">
+                    单文件上传
+                </label>
+                <label>
+                    <input type="radio" name="uploadMode" value="batch" onchange="switchUploadMode()">
+                    批量上传
+                </label>
+            </div>
+
+            <div class="form-group" id="titleGroup">
                 <label for="musicTitle">歌曲名称 *</label>
-                <input type="text" id="musicTitle" name="title" required 
+                <input type="text" id="musicTitle" name="title" 
                        placeholder="请输入歌曲名称" maxlength="255">
             </div>
 
             <div class="form-group">
-                <label for="musicFile">选择音频文件 *</label>
+                <label for="musicFile" id="fileLabel">选择音频文件 *</label>
                 <div class="file-input-wrapper">
                     <input type="file" id="musicFile" name="file" required 
                            accept="audio/*" onchange="handleFileSelect(this)">
@@ -196,6 +234,41 @@
         const form = document.getElementById('uploadForm');
         const messageDiv = document.getElementById('message');
         const submitBtn = document.getElementById('submitBtn');
+        let isBatchMode = false;
+
+        // 切换上传模式
+        function switchUploadMode() {
+            const mode = document.querySelector('input[name="uploadMode"]:checked').value;
+            isBatchMode = mode === 'batch';
+            const titleGroup = document.getElementById('titleGroup');
+            const fileInput = document.getElementById('musicFile');
+            const fileLabel = document.getElementById('fileLabel');
+            const infoBox = document.getElementById('infoBox');
+            const titleInput = document.getElementById('musicTitle');
+
+            if (isBatchMode) {
+                // 批量上传模式
+                titleGroup.classList.add('hidden');
+                titleInput.removeAttribute('required');
+                fileInput.setAttribute('accept', '.zip');
+                fileLabel.textContent = '选择ZIP压缩包 *';
+                infoBox.innerHTML = '<strong>提示：</strong>请上传ZIP格式压缩包，压缩包内应全部为音频文件（MP3、WAV、M4A等），且不能包含文件夹。每个音频文件大小不超过5MB，压缩包总大小不超过50MB。文件名将作为歌曲名称。';
+                submitBtn.textContent = '📦 批量上传';
+            } else {
+                // 单文件上传模式
+                titleGroup.classList.remove('hidden');
+                titleInput.setAttribute('required', 'required');
+                fileInput.setAttribute('accept', 'audio/*');
+                fileLabel.textContent = '选择音频文件 *';
+                infoBox.innerHTML = '<strong>提示：</strong>支持MP3等音频格式，文件大小不超过5MB';
+                submitBtn.textContent = '🎵 上传歌曲';
+            }
+
+            // 重置表单
+            form.reset();
+            document.getElementById('fileInfo').textContent = '';
+            messageDiv.style.display = 'none';
+        }
 
         // 处理文件选择
         function handleFileSelect(input) {
@@ -206,12 +279,25 @@
                 const fileSize = (file.size / 1024 / 1024).toFixed(2);
                 fileInfo.textContent = `已选择: ${file.name} (${fileSize} MB)`;
                 
-                // 检查文件大小
-                if (file.size > 5 * 1024 * 1024) {
-                    fileInfo.textContent = '文件大小超过5MB限制';
-                    fileInfo.style.color = '#dc3545';
+                if (isBatchMode) {
+                    // 批量上传模式：检查是否为ZIP文件
+                    if (!file.name.toLowerCase().endsWith('.zip')) {
+                        fileInfo.textContent = '请选择ZIP格式的压缩包';
+                        fileInfo.style.color = '#dc3545';
+                    } else if (file.size > 50 * 1024 * 1024) {
+                        fileInfo.textContent = '压缩包大小超过50MB限制';
+                        fileInfo.style.color = '#dc3545';
+                    } else {
+                        fileInfo.style.color = '#28a745';
+                    }
                 } else {
-                    fileInfo.style.color = '#28a745';
+                    // 单文件上传模式：检查文件大小
+                    if (file.size > 5 * 1024 * 1024) {
+                        fileInfo.textContent = '文件大小超过5MB限制';
+                        fileInfo.style.color = '#dc3545';
+                    } else {
+                        fileInfo.style.color = '#28a745';
+                    }
                 }
             }
         }
@@ -222,27 +308,43 @@
 
             const formData = new FormData();
             const fileInput = document.getElementById('musicFile');
-            const titleInput = document.getElementById('musicTitle');
 
             if (!fileInput.files[0]) {
                 showMessage('请选择要上传的文件', 'error');
                 return;
             }
 
-            formData.append('file', fileInput.files[0]);
-            formData.append('title', titleInput.value);
-
             // 禁用提交按钮
             submitBtn.disabled = true;
-            submitBtn.textContent = '上传中...';
+            submitBtn.textContent = isBatchMode ? '上传中...' : '上传中...';
 
             try {
-                const response = await fetch('/api/music/upload', {
+                let url, result;
+                
+                if (isBatchMode) {
+                    // 批量上传
+                    formData.append('file', fileInput.files[0]);
+                    url = '/api/music/batch-upload';
+                } else {
+                    // 单文件上传
+                    const titleInput = document.getElementById('musicTitle');
+                    if (!titleInput.value.trim()) {
+                        showMessage('请输入歌曲名称', 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '🎵 上传歌曲';
+                        return;
+                    }
+                    formData.append('file', fileInput.files[0]);
+                    formData.append('title', titleInput.value);
+                    url = '/api/music/upload';
+                }
+
+                const response = await fetch(url, {
                     method: 'POST',
                     body: formData
                 });
 
-                const result = await response.text();
+                result = await response.text();
 
                 if (response.ok) {
                     showMessage(result, 'success');
@@ -255,7 +357,7 @@
                 showMessage('上传失败: ' + error.message, 'error');
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = '🎵 上传歌曲';
+                submitBtn.textContent = isBatchMode ? '📦 批量上传' : '🎵 上传歌曲';
             }
         });
 
