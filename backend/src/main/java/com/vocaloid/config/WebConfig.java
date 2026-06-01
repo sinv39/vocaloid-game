@@ -1,12 +1,17 @@
 package com.vocaloid.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
+    @Autowired
+    private AdminAuthInterceptor adminAuthInterceptor;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
@@ -24,5 +29,12 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addViewController("/api-test").setViewName("forward:/api-test.html");
         registry.addViewController("/debug").setViewName("forward:/debug.html");
         registry.addViewController("/guess-debug").setViewName("forward:/guess-debug.html");
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        // 注册管理权限验证拦截器
+        registry.addInterceptor(adminAuthInterceptor)
+                .addPathPatterns("/api/music/**");
     }
 }
